@@ -163,13 +163,13 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const resp = await fetch('/api/admin/actors', { credentials: 'same-origin' });
             if (!resp.ok) {
-                list.innerHTML = '<p class="placeholder">Erreur d\'authentification</p>';
+                list.innerHTML = '<p class="empty-msg">Erreur d\'authentification</p>';
                 return;
             }
             const data = await resp.json();
 
             if (!data.actors || data.actors.length === 0) {
-                list.innerHTML = '<p class="placeholder">Aucun doubleur dans la base.</p>';
+                list.innerHTML = '<p class="empty-msg">Aucun doubleur dans la base.</p>';
                 return;
             }
 
@@ -210,7 +210,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             });
         } catch (err) {
-            list.innerHTML = '<p class="placeholder">Erreur de chargement</p>';
+            list.innerHTML = '<p class="empty-msg">Erreur de chargement</p>';
         }
     }
 

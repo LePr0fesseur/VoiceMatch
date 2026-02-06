@@ -1,57 +1,55 @@
-/* VoiceMatch - Admin Styles */
+/* ============================================
+   VoiceMatch - Admin Stylesheet
+   ============================================ */
 
 .admin-body {
     background: var(--bg);
 }
 
 .admin-app {
-    max-width: 700px;
+    max-width: 680px;
     margin: 0 auto;
     min-height: 100vh;
     position: relative;
 }
 
 /* ---- Screens ---- */
-.admin-screen {
-    display: none;
-}
+.admin-screen { display: none; }
+.admin-screen.active { display: block; }
 
-.admin-screen.active {
-    display: block;
-}
-
-/* ---- Login ---- */
+/* ---- Login Screen ---- */
 .login-card {
-    max-width: 380px;
-    margin: 120px auto 0;
-    padding: 40px;
+    max-width: 360px;
+    margin: 0 auto;
+    padding: 40px 32px;
     background: var(--bg-card);
     border-radius: var(--radius);
     border: 1px solid var(--border);
     text-align: center;
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: calc(100% - 40px);
 }
-
-.login-card h1 {
-    font-size: 1.8rem;
-    background: linear-gradient(135deg, var(--primary), var(--secondary));
+.login-logo {
+    font-size: 1.6rem;
+    font-weight: 800;
+    background: linear-gradient(135deg, var(--primary), var(--accent));
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
-    margin-bottom: 4px;
+    margin-bottom: 2px;
 }
-
-.login-card .subtitle {
-    color: var(--text-muted);
-    margin-bottom: 24px;
-    font-size: 0.95rem;
+.login-subtitle {
+    color: var(--text-dim);
+    margin-bottom: 28px;
+    font-size: 0.9rem;
 }
-
 .login-card form {
     display: flex;
     flex-direction: column;
     gap: 12px;
 }
-
 .login-card input[type="password"] {
     width: 100%;
     padding: 12px 16px;
@@ -59,177 +57,159 @@
     border: 1px solid var(--border);
     border-radius: 8px;
     color: var(--text);
-    font-size: 1rem;
+    font-size: 0.95rem;
+    font-family: inherit;
 }
-
 .login-card input[type="password"]:focus {
     outline: none;
     border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(124,108,240,0.15);
 }
-
+.login-card input[type="password"]::placeholder {
+    color: var(--text-dim);
+}
 .back-link {
     display: inline-block;
-    margin-top: 16px;
-    color: var(--text-muted);
-    font-size: 0.85rem;
+    margin-top: 20px;
+    color: var(--text-dim);
+    font-size: 0.83rem;
     text-decoration: none;
+    transition: color 0.2s;
 }
-
-.back-link:hover {
-    color: var(--secondary);
-}
+.back-link:hover { color: var(--accent); }
 
 /* ---- Top Bar ---- */
 .admin-topbar {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 16px 20px;
+    padding: 18px 24px;
     border-bottom: 1px solid var(--border);
-    margin-bottom: 20px;
+    background: var(--bg-surface);
 }
-
-.admin-topbar h2 {
-    font-size: 1.2rem;
-    background: linear-gradient(135deg, var(--primary), var(--secondary));
+.admin-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    background: linear-gradient(135deg, var(--primary), var(--accent));
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
 }
-
 .admin-topbar-right {
     display: flex;
     gap: 8px;
 }
 
-/* ---- Stats ---- */
-.admin-stats {
-    display: flex;
-    gap: 16px;
-    padding: 0 20px;
-    margin-bottom: 24px;
+/* ---- Admin Content ---- */
+.admin-content {
+    padding: 24px;
 }
 
+/* ---- Stats ---- */
+.admin-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-bottom: 24px;
+}
 .stat-card {
-    flex: 1;
     background: var(--bg-card);
     border: 1px solid var(--border);
     border-radius: var(--radius);
     padding: 20px;
     text-align: center;
 }
-
 .stat-value {
     font-size: 2rem;
     font-weight: 800;
-    color: var(--secondary);
+    color: var(--accent);
+    line-height: 1;
 }
-
 .stat-label {
-    font-size: 0.85rem;
-    color: var(--text-muted);
-    margin-top: 4px;
+    font-size: 0.82rem;
+    color: var(--text-dim);
+    margin-top: 6px;
 }
 
-/* ---- Sections ---- */
-.admin-section {
+/* ---- Cards ---- */
+.card {
     background: var(--bg-card);
     border: 1px solid var(--border);
     border-radius: var(--radius);
     padding: 24px;
-    margin: 0 20px 20px;
+    margin-bottom: 20px;
 }
-
-.admin-section h3 {
-    font-size: 1.1rem;
-    margin-bottom: 8px;
-}
-
-.section-desc {
-    color: var(--text-muted);
-    font-size: 0.9rem;
+.card-title {
+    font-size: 1rem;
+    font-weight: 700;
     margin-bottom: 16px;
 }
-
-.section-header {
+.card-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 12px;
+    margin-bottom: 14px;
 }
-
-.section-header h3 {
-    margin-bottom: 0;
-}
+.card-header .card-title { margin-bottom: 0; }
 
 /* ---- Forms ---- */
 .form-group {
     margin-bottom: 14px;
 }
-
 .form-group label {
     display: block;
-    color: var(--text-muted);
-    font-size: 0.85rem;
+    color: var(--text-dim);
+    font-size: 0.83rem;
     margin-bottom: 6px;
+    font-weight: 500;
 }
-
-.admin-section input[type="text"],
-.admin-section input[type="password"] {
+.card input[type="text"],
+.card input[type="password"] {
     width: 100%;
     padding: 10px 14px;
     background: var(--bg);
     border: 1px solid var(--border);
     border-radius: 8px;
     color: var(--text);
-    font-size: 0.95rem;
+    font-size: 0.9rem;
+    font-family: inherit;
 }
-
-.admin-section input[type="text"]:focus,
-.admin-section input[type="password"]:focus {
+.card input[type="text"]:focus,
+.card input[type="password"]:focus {
     outline: none;
     border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(124,108,240,0.15);
 }
-
-.admin-section input[type="file"] {
-    color: var(--text-muted);
-    font-size: 0.9rem;
+.card input[type="text"]::placeholder {
+    color: var(--text-dim);
+}
+.card input[type="file"] {
+    color: var(--text-dim);
+    font-size: 0.88rem;
 }
 
 /* ---- Actors List ---- */
-.actors-list {
-    margin-top: 8px;
-}
-
+.actors-list { margin-top: 4px; }
 .actor-item {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 12px 16px;
+    padding: 12px 14px;
     background: var(--bg);
     border-radius: 8px;
     margin-bottom: 8px;
 }
-
-.actor-name {
-    font-weight: 500;
-}
-
-.actor-meta {
-    color: var(--text-muted);
-    font-size: 0.85rem;
-}
-
-.placeholder {
+.actor-name { font-weight: 500; font-size: 0.92rem; }
+.actor-meta { color: var(--text-dim); font-size: 0.8rem; margin-top: 2px; }
+.empty-msg {
     text-align: center;
-    color: var(--text-muted);
+    color: var(--text-dim);
     padding: 20px;
+    font-size: 0.88rem;
 }
 
 /* ---- Password Warning ---- */
-#password-warning {
-    margin: 0 20px 20px;
-}
+#password-warning { margin-bottom: 20px; }
 
 /* ---- Responsive ---- */
 @media (max-width: 600px) {
@@ -237,13 +217,9 @@
         flex-direction: column;
         gap: 12px;
         text-align: center;
+        padding: 16px;
     }
-
-    .admin-stats {
-        flex-direction: column;
-    }
-
-    .admin-section {
-        margin: 0 12px 16px;
-    }
+    .admin-content { padding: 16px; }
+    .admin-stats { grid-template-columns: 1fr; }
+    .card { padding: 18px; }
 }
