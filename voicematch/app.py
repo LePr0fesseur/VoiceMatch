@@ -192,7 +192,7 @@ async def admin_login(password: str = Form(...)):
         value=token,
         max_age=ADMIN_SESSION_MAX_AGE,
         httponly=True,
-        samesite="strict",
+        samesite="lax",
         path="/",
     )
     return response
