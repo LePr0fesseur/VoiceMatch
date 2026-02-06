@@ -16,7 +16,7 @@ MIN_AUDIO_DURATION = 1.0  # seconds
 MAX_AUDIO_DURATION = 30.0  # seconds
 
 # Voice embedding settings
-EMBEDDING_DIM = 256  # resemblyzer output dimension
+EMBEDDING_DIM = 192  # ECAPA-TDNN output (192) / resemblyzer fallback (256)
 
 # Matching settings
 SIMILARITY_THRESHOLD = 0.45  # cosine similarity threshold for a match
