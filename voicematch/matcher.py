@@ -159,23 +159,30 @@ def match_from_file(
     threshold: float = SIMILARITY_THRESHOLD,
 ) -> list[dict]:
     """Match from audio file using per-segment analysis."""
-    raw_audio = audio.load_audio(file_path)
-    if raw_audio is None:
+    try:
+        raw_audio = audio.load_audio(file_path)
+        if raw_audio is None or len(raw_audio) == 0:
+            logger.warning("Failed to load audio from %s", file_path)
+            return []
+
+        # Extract per-segment embeddings (isolates speech from music/effects)
+        segment_embeddings = audio.extract_segment_embeddings(raw_audio)
+
+        if not segment_embeddings:
+            logger.warning("No speech segments found in %s", file_path)
+            return []
+
+        # Extract MFCC for each segment (may return None for short audio)
+        preprocessed = audio.preprocess_audio(raw_audio)
+        mfcc = audio.extract_mfcc_profile(preprocessed)
+        mfcc_profiles = [mfcc] * len(segment_embeddings) if mfcc is not None else None
+
+        # Use segment matching for best results
+        return match_segments(segment_embeddings, mfcc_profiles,
+                              top_k=top_k, threshold=threshold)
+    except Exception as e:
+        logger.error("match_from_file error for %s: %s", file_path, e)
         return []
-
-    # Extract per-segment embeddings (isolates speech from music/effects)
-    segment_embeddings = audio.extract_segment_embeddings(raw_audio)
-
-    if not segment_embeddings:
-        return []
-
-    # Extract MFCC for each segment
-    preprocessed = audio.preprocess_audio(raw_audio)
-    mfcc_profiles = [audio.extract_mfcc_profile(preprocessed)]
-
-    # Use segment matching for best results
-    return match_segments(segment_embeddings, mfcc_profiles,
-                          top_k=top_k, threshold=threshold)
 
 
 def match_from_bytes(
@@ -185,26 +192,28 @@ def match_from_bytes(
     threshold: float = SIMILARITY_THRESHOLD,
 ) -> list[dict]:
     """Match from audio bytes using per-segment analysis."""
-    raw_audio = audio.load_audio_from_bytes(audio_bytes, format=audio_format)
-    if raw_audio is None:
+    try:
+        if not audio_bytes:
+            logger.warning("Empty audio bytes")
+            return []
+
+        raw_audio = audio.load_audio_from_bytes(audio_bytes, format=audio_format)
+        if raw_audio is None or len(raw_audio) == 0:
+            return []
+
+        # Extract per-segment embeddings
+        segment_embeddings = audio.extract_segment_embeddings(raw_audio)
+
+        if not segment_embeddings:
+            return []
+
+        # Extract MFCC from full preprocessed audio as secondary signal
+        preprocessed = audio.preprocess_audio(raw_audio)
+        full_mfcc = audio.extract_mfcc_profile(preprocessed)
+        mfcc_profiles = [full_mfcc] * len(segment_embeddings) if full_mfcc is not None else None
+
+        return match_segments(segment_embeddings, mfcc_profiles,
+                              top_k=top_k, threshold=threshold)
+    except Exception as e:
+        logger.error("match_from_bytes error: %s", e)
         return []
-
-    # Extract per-segment embeddings
-    segment_embeddings = audio.extract_segment_embeddings(raw_audio)
-
-    if not segment_embeddings:
-        return []
-
-    # Extract MFCC per segment
-    mfcc_profiles = []
-    for seg_emb in segment_embeddings:
-        # We don't have the raw segment audio here, use preprocessed full audio
-        pass
-
-    # Extract MFCC from full preprocessed audio as secondary signal
-    preprocessed = audio.preprocess_audio(raw_audio)
-    full_mfcc = audio.extract_mfcc_profile(preprocessed)
-    mfcc_profiles = [full_mfcc] * len(segment_embeddings) if full_mfcc is not None else None
-
-    return match_segments(segment_embeddings, mfcc_profiles,
-                          top_k=top_k, threshold=threshold)

@@ -140,6 +140,8 @@ def load_audio_from_bytes(audio_bytes: bytes, format: str = "wav") -> Optional[n
 
 def apply_pre_emphasis(audio: np.ndarray, coeff: float = 0.97) -> np.ndarray:
     """Pre-emphasis filter: boost high frequencies (formants, fricatives)."""
+    if audio is None or len(audio) < 2:
+        return audio if audio is not None else np.array([], dtype=np.float32)
     return np.append(audio[0], audio[1:] - coeff * audio[:-1])
 
 
@@ -235,8 +237,13 @@ def apply_vad_segments(audio: np.ndarray, sr: int = SAMPLE_RATE,
 
 def reduce_noise(audio: np.ndarray, sr: int = SAMPLE_RATE) -> np.ndarray:
     """Spectral noise reduction via spectral gating."""
-    n_fft = 2048
-    hop_length = 512
+    if audio is None or len(audio) == 0:
+        return audio if audio is not None else np.array([], dtype=np.float32)
+
+    n_fft = min(2048, len(audio))
+    if n_fft < 64:
+        return audio
+    hop_length = min(512, n_fft // 4)
 
     try:
         stft = np.fft.rfft(
@@ -295,12 +302,45 @@ def preprocess_audio(audio: np.ndarray, sr: int = SAMPLE_RATE) -> np.ndarray:
 def extract_mfcc_profile(audio: np.ndarray, sr: int = SAMPLE_RATE) -> Optional[np.ndarray]:
     """Extract 39-D MFCC speaker profile (13 MFCC + 13 delta + 13 ddelta) with CMVN."""
     try:
+        if audio is None or len(audio) == 0:
+            logger.warning("MFCC: empty audio")
+            return None
+
+        # Minimum 0.5 seconds of audio required
+        if len(audio) / sr < 0.5:
+            logger.warning("MFCC: audio too short (%.2fs < 0.5s)", len(audio) / sr)
+            return None
+
+        # Pad short audio to at least 16000 samples (1 second) to avoid
+        # librosa delta width errors (needs >= 9 frames)
+        if len(audio) < 16000:
+            audio = np.pad(audio, (0, 16000 - len(audio)), mode='constant')
+
         import librosa
 
-        mfccs = librosa.feature.mfcc(y=audio, sr=sr, n_mfcc=13, n_fft=2048,
-                                      hop_length=512, n_mels=40)
-        delta = librosa.feature.delta(mfccs, order=1)
-        ddelta = librosa.feature.delta(mfccs, order=2)
+        # Adapt n_fft to audio length to prevent errors
+        n_fft = min(2048, len(audio))
+        # n_fft must be even for rfft
+        if n_fft % 2 != 0:
+            n_fft -= 1
+        hop_length = min(512, n_fft // 4)
+
+        mfccs = librosa.feature.mfcc(y=audio, sr=sr, n_mfcc=13, n_fft=n_fft,
+                                      hop_length=hop_length, n_mels=40)
+
+        # Delta needs at least width*2+1 frames (default width=9 → 19 frames)
+        # Use smaller width if not enough frames
+        n_frames = mfccs.shape[1]
+        if n_frames < 3:
+            logger.warning("MFCC: too few frames (%d) for delta", n_frames)
+            return None
+
+        delta_width = min(9, (n_frames - 1) // 2)
+        if delta_width < 1:
+            delta_width = 1
+
+        delta = librosa.feature.delta(mfccs, order=1, width=2 * delta_width + 1)
+        ddelta = librosa.feature.delta(mfccs, order=2, width=2 * delta_width + 1)
         full_mfcc = np.vstack([mfccs, delta, ddelta])
 
         # CMVN normalization
@@ -325,8 +365,16 @@ def extract_embedding(audio: np.ndarray,
                       apply_preprocessing: bool = True) -> Optional[np.ndarray]:
     """Extract a speaker embedding from audio."""
     try:
+        if audio is None or len(audio) == 0:
+            logger.warning("Empty audio provided for embedding extraction")
+            return None
+
         if apply_preprocessing:
             audio = preprocess_audio(audio)
+
+        if audio is None or len(audio) == 0:
+            logger.warning("Audio empty after preprocessing")
+            return None
 
         duration = len(audio) / SAMPLE_RATE
         if duration < MIN_AUDIO_DURATION:
@@ -365,7 +413,15 @@ def extract_robust_embedding(audio: np.ndarray,
     3. Generate speed-augmented variants (0.9x, 1.1x), embed each
     4. Average all → L2-normalized centroid
     """
+    if audio is None or len(audio) == 0:
+        logger.warning("Empty audio for robust embedding")
+        return None
+
     clean_audio = preprocess_audio(audio, sr)
+
+    if clean_audio is None or len(clean_audio) == 0:
+        logger.warning("Audio empty after preprocessing")
+        return None
 
     duration = len(clean_audio) / sr
     if duration < MIN_AUDIO_DURATION:
@@ -439,6 +495,10 @@ def extract_segment_embeddings(audio: np.ndarray,
     speech turns and embeds each separately, dramatically improving
     matching accuracy vs embedding the entire noisy clip at once.
     """
+    if audio is None or len(audio) == 0:
+        logger.warning("Empty audio for segment embeddings")
+        return []
+
     # Pre-emphasis + noise reduction first (but NOT VAD, we want segments)
     audio = apply_pre_emphasis(audio)
     audio = reduce_noise(audio, sr)
