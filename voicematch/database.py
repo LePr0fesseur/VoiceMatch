@@ -55,6 +55,14 @@ def init_db():
     except sqlite3.OperationalError:
         pass  # Column already exists
 
+    # Migration: add mfcc_profile column for MFCC-based score fusion
+    try:
+        conn.execute(
+            "ALTER TABLE voice_samples ADD COLUMN mfcc_profile BLOB"
+        )
+    except sqlite3.OperationalError:
+        pass  # Column already exists
+
     conn.commit()
     conn.close()
 
@@ -90,15 +98,17 @@ def add_voice_sample(
     audio_path: str = "",
     description: str = "",
     duration: float = 0.0,
+    mfcc_profile: Optional[np.ndarray] = None,
 ) -> int:
-    """Store a voice embedding for an actor."""
+    """Store a voice embedding (and optional MFCC profile) for an actor."""
     conn = get_connection()
     cursor = conn.cursor()
+    mfcc_blob = mfcc_profile.tobytes() if mfcc_profile is not None else None
     cursor.execute(
         """INSERT INTO voice_samples
-           (actor_id, audio_path, description, embedding, duration_seconds)
-           VALUES (?, ?, ?, ?, ?)""",
-        (actor_id, audio_path, description, embedding.tobytes(), duration),
+           (actor_id, audio_path, description, embedding, duration_seconds, mfcc_profile)
+           VALUES (?, ?, ?, ?, ?, ?)""",
+        (actor_id, audio_path, description, embedding.tobytes(), duration, mfcc_blob),
     )
     conn.commit()
     sample_id = cursor.lastrowid
@@ -107,11 +117,11 @@ def add_voice_sample(
 
 
 def get_all_embeddings() -> list[dict]:
-    """Retrieve all voice embeddings with actor info for matching."""
+    """Retrieve all voice embeddings (+ MFCC profiles) with actor info for matching."""
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute("""
-        SELECT vs.id, vs.embedding,
+        SELECT vs.id, vs.embedding, vs.mfcc_profile,
                a.id as actor_id, a.name, a.original_actor, a.language
         FROM voice_samples vs
         JOIN actors a ON vs.actor_id = a.id
@@ -119,6 +129,9 @@ def get_all_embeddings() -> list[dict]:
     results = []
     for row in cursor.fetchall():
         emb = np.frombuffer(row["embedding"], dtype=np.float32)
+        mfcc = None
+        if row["mfcc_profile"] is not None:
+            mfcc = np.frombuffer(row["mfcc_profile"], dtype=np.float32)
         results.append({
             "sample_id": row["id"],
             "actor_id": row["actor_id"],
@@ -126,6 +139,7 @@ def get_all_embeddings() -> list[dict]:
             "original_actor": row["original_actor"],
             "language": row["language"],
             "embedding": emb,
+            "mfcc_profile": mfcc,
         })
     conn.close()
     return results
