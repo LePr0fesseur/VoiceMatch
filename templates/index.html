@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VoiceMatch - Reconnaissance de voix d'acteurs</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>VoiceMatch</h1>
+            <p class="subtitle">Reconnaissez les voix des doubleurs et acteurs</p>
+            <div class="stats">
+                <span id="stat-actors">{{ stats.actors }}</span> acteurs &bull;
+                <span id="stat-samples">{{ stats.voice_samples }}</span> echantillons vocaux
+            </div>
+        </header>
+
+        <!-- Tab Navigation -->
+        <nav class="tabs">
+            <button class="tab active" data-tab="identify">Identifier une voix</button>
+            <button class="tab" data-tab="database">Base de donnees</button>
+            <button class="tab" data-tab="index">Indexer des voix</button>
+        </nav>
+
+        <!-- IDENTIFY TAB -->
+        <section id="tab-identify" class="tab-content active">
+            <div class="card">
+                <h2>Enregistrer depuis le micro</h2>
+                <p>Faites jouer un extrait audio et enregistrez-le avec votre micro.</p>
+                <div class="record-controls">
+                    <button id="btn-record" class="btn btn-record">
+                        <span class="icon">&#9679;</span> Enregistrer
+                    </button>
+                    <button id="btn-stop" class="btn btn-stop" disabled>
+                        <span class="icon">&#9632;</span> Arreter
+                    </button>
+                    <span id="record-status" class="status"></span>
+                </div>
+                <div id="record-visualizer" class="visualizer">
+                    <canvas id="canvas-record" width="400" height="60"></canvas>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>Uploader un fichier audio</h2>
+                <p>Selectionnez un fichier audio (WAV, MP3, OGG, etc.)</p>
+                <form id="form-upload" enctype="multipart/form-data">
+                    <input type="file" id="input-file" accept="audio/*" />
+                    <button type="submit" class="btn btn-primary">Analyser</button>
+                </form>
+            </div>
+
+            <div class="card">
+                <h2>Analyser depuis YouTube</h2>
+                <p>Collez l'URL d'une video YouTube contenant une voix a identifier.</p>
+                <form id="form-youtube-match">
+                    <input type="text" id="input-yt-url" name="url"
+                           placeholder="https://www.youtube.com/watch?v=..." />
+                    <button type="submit" class="btn btn-primary">Analyser</button>
+                </form>
+            </div>
+
+            <!-- Results -->
+            <div id="results" class="results hidden">
+                <h2>Resultats</h2>
+                <div id="results-list"></div>
+            </div>
+        </section>
+
+        <!-- DATABASE TAB -->
+        <section id="tab-database" class="tab-content">
+            <div class="card">
+                <h2>Voix indexees</h2>
+                <button id="btn-refresh-actors" class="btn btn-secondary">Actualiser</button>
+                <div id="actors-list" class="actors-list">
+                    <p class="placeholder">Chargement...</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- INDEX TAB -->
+        <section id="tab-index" class="tab-content">
+            <div class="card">
+                <h2>Indexer une video YouTube</h2>
+                <p>Ajoutez une video de doubleur a la base de donnees.</p>
+                <form id="form-index-url">
+                    <input type="text" id="input-index-url" name="url"
+                           placeholder="https://www.youtube.com/watch?v=..." />
+                    <button type="submit" class="btn btn-primary">Indexer</button>
+                </form>
+                <div id="index-url-result" class="hidden"></div>
+            </div>
+
+            <div class="card">
+                <h2>Recherche et indexation automatique</h2>
+                <p>Recherchez des videos de doubleurs sur YouTube et indexez-les automatiquement.</p>
+                <form id="form-index-search">
+                    <input type="text" id="input-search-query" name="query"
+                           placeholder="Nom d'acteur (ex: Jim Carrey) ou vide pour recherche generale" />
+                    <div class="form-row">
+                        <label>Nombre max de videos :
+                            <input type="number" id="input-max-videos" name="max_videos"
+                                   value="10" min="1" max="50" />
+                        </label>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Rechercher et indexer</button>
+                </form>
+                <div id="index-search-result" class="hidden"></div>
+            </div>
+        </section>
+
+        <!-- Loading overlay -->
+        <div id="loading" class="loading hidden">
+            <div class="spinner"></div>
+            <p id="loading-text">Analyse en cours...</p>
+        </div>
+    </div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>
