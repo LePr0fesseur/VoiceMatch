@@ -19,7 +19,7 @@ MAX_AUDIO_DURATION = 30.0  # seconds
 EMBEDDING_DIM = 256  # resemblyzer output dimension
 
 # Matching settings
-SIMILARITY_THRESHOLD = 0.75  # cosine similarity threshold for a match
+SIMILARITY_THRESHOLD = 0.45  # cosine similarity threshold for a match
 TOP_K_RESULTS = 5
 
 # Admin settings

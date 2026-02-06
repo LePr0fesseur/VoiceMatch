@@ -28,14 +28,13 @@ def match_voice(
     results = []
     for entry in all_embeddings:
         similarity = audio.compute_similarity(voice_embedding, entry["embedding"])
-        if similarity >= threshold:
-            results.append({
-                "name": entry["name"],
-                "original_actor": entry["original_actor"],
-                "similarity": round(similarity * 100, 1),
-                "actor_id": entry["actor_id"],
-                "sample_id": entry["sample_id"],
-            })
+        results.append({
+            "name": entry["name"],
+            "original_actor": entry["original_actor"],
+            "similarity": round(similarity * 100, 1),
+            "actor_id": entry["actor_id"],
+            "sample_id": entry["sample_id"],
+        })
 
     # Sort by similarity descending
     results.sort(key=lambda x: x["similarity"], reverse=True)
@@ -48,7 +47,12 @@ def match_voice(
             seen_actors.add(r["actor_id"])
             unique_results.append(r)
 
-    return unique_results[:top_k]
+    # Filter by threshold but always keep at least the best match
+    filtered = [r for r in unique_results if r["similarity"] >= threshold * 100]
+    if not filtered and unique_results:
+        filtered = [unique_results[0]]
+
+    return filtered[:top_k]
 
 
 def match_from_file(
