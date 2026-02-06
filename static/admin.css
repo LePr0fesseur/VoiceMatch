@@ -1,0 +1,249 @@
+/* VoiceMatch - Admin Styles */
+
+.admin-body {
+    background: var(--bg);
+}
+
+.admin-app {
+    max-width: 700px;
+    margin: 0 auto;
+    min-height: 100vh;
+    position: relative;
+}
+
+/* ---- Screens ---- */
+.admin-screen {
+    display: none;
+}
+
+.admin-screen.active {
+    display: block;
+}
+
+/* ---- Login ---- */
+.login-card {
+    max-width: 380px;
+    margin: 120px auto 0;
+    padding: 40px;
+    background: var(--bg-card);
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    text-align: center;
+}
+
+.login-card h1 {
+    font-size: 1.8rem;
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 4px;
+}
+
+.login-card .subtitle {
+    color: var(--text-muted);
+    margin-bottom: 24px;
+    font-size: 0.95rem;
+}
+
+.login-card form {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.login-card input[type="password"] {
+    width: 100%;
+    padding: 12px 16px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-size: 1rem;
+}
+
+.login-card input[type="password"]:focus {
+    outline: none;
+    border-color: var(--primary);
+}
+
+.back-link {
+    display: inline-block;
+    margin-top: 16px;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    text-decoration: none;
+}
+
+.back-link:hover {
+    color: var(--secondary);
+}
+
+/* ---- Top Bar ---- */
+.admin-topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 20px;
+}
+
+.admin-topbar h2 {
+    font-size: 1.2rem;
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.admin-topbar-right {
+    display: flex;
+    gap: 8px;
+}
+
+/* ---- Stats ---- */
+.admin-stats {
+    display: flex;
+    gap: 16px;
+    padding: 0 20px;
+    margin-bottom: 24px;
+}
+
+.stat-card {
+    flex: 1;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    text-align: center;
+}
+
+.stat-value {
+    font-size: 2rem;
+    font-weight: 800;
+    color: var(--secondary);
+}
+
+.stat-label {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    margin-top: 4px;
+}
+
+/* ---- Sections ---- */
+.admin-section {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px;
+    margin: 0 20px 20px;
+}
+
+.admin-section h3 {
+    font-size: 1.1rem;
+    margin-bottom: 8px;
+}
+
+.section-desc {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    margin-bottom: 16px;
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.section-header h3 {
+    margin-bottom: 0;
+}
+
+/* ---- Forms ---- */
+.form-group {
+    margin-bottom: 14px;
+}
+
+.form-group label {
+    display: block;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    margin-bottom: 6px;
+}
+
+.admin-section input[type="text"],
+.admin-section input[type="password"] {
+    width: 100%;
+    padding: 10px 14px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-size: 0.95rem;
+}
+
+.admin-section input[type="text"]:focus,
+.admin-section input[type="password"]:focus {
+    outline: none;
+    border-color: var(--primary);
+}
+
+.admin-section input[type="file"] {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+}
+
+/* ---- Actors List ---- */
+.actors-list {
+    margin-top: 8px;
+}
+
+.actor-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    background: var(--bg);
+    border-radius: 8px;
+    margin-bottom: 8px;
+}
+
+.actor-name {
+    font-weight: 500;
+}
+
+.actor-meta {
+    color: var(--text-muted);
+    font-size: 0.85rem;
+}
+
+.placeholder {
+    text-align: center;
+    color: var(--text-muted);
+    padding: 20px;
+}
+
+/* ---- Password Warning ---- */
+#password-warning {
+    margin: 0 20px 20px;
+}
+
+/* ---- Responsive ---- */
+@media (max-width: 600px) {
+    .admin-topbar {
+        flex-direction: column;
+        gap: 12px;
+        text-align: center;
+    }
+
+    .admin-stats {
+        flex-direction: column;
+    }
+
+    .admin-section {
+        margin: 0 12px 16px;
+    }
+}

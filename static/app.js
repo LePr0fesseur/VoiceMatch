@@ -1,22 +1,14 @@
-/* VoiceMatch - Frontend Application */
+/* VoiceMatch - Public Frontend (Shazam-like) */
 
-// ---- Tab Navigation ----
-document.querySelectorAll('.tab').forEach(tab => {
-    tab.addEventListener('click', () => {
-        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-        tab.classList.add('active');
-        document.getElementById(`tab-${tab.dataset.tab}`).classList.add('active');
-
-        if (tab.dataset.tab === 'database') {
-            loadActors();
-        }
-    });
-});
+// ---- Screen Navigation ----
+function showScreen(id) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+}
 
 // ---- Loading Overlay ----
-function showLoading(text = 'Analyse en cours...') {
-    document.getElementById('loading-text').textContent = text;
+function showLoading(text) {
+    document.getElementById('loading-text').textContent = text || 'Analyse en cours...';
     document.getElementById('loading').classList.remove('hidden');
 }
 
@@ -24,36 +16,10 @@ function hideLoading() {
     document.getElementById('loading').classList.add('hidden');
 }
 
-// ---- Results Display ----
-function showResults(results) {
-    const container = document.getElementById('results');
-    const list = document.getElementById('results-list');
-    container.classList.remove('hidden');
-
-    if (!results || results.length === 0) {
-        list.innerHTML = '<div class="no-results">Aucune correspondance trouvee. Essayez d\'indexer plus de voix dans l\'onglet "Indexer des voix".</div>';
-        return;
-    }
-
-    list.innerHTML = results.map((r, i) => `
-        <div class="result-card">
-            <div class="result-rank">#${i + 1}</div>
-            <div class="result-info">
-                <div class="result-name">${escapeHtml(r.name)}</div>
-                ${r.original_actor ? `<div class="result-original">Voix de : ${escapeHtml(r.original_actor)}</div>` : ''}
-                ${r.youtube_url ? `<div class="result-source"><a href="${escapeHtml(r.youtube_url)}" target="_blank">Voir la source YouTube</a></div>` : ''}
-            </div>
-            <div class="result-score">
-                <div class="score-value">${r.similarity}%</div>
-                <div class="score-label">similarite</div>
-            </div>
-        </div>
-    `).join('');
-}
-
+// ---- HTML Escaping ----
 function escapeHtml(text) {
     const div = document.createElement('div');
-    div.textContent = text;
+    div.textContent = text || '';
     return div.innerHTML;
 }
 
@@ -63,15 +29,23 @@ let audioChunks = [];
 let audioContext = null;
 let analyser = null;
 let animationId = null;
+let isRecording = false;
 
-const btnRecord = document.getElementById('btn-record');
-const btnStop = document.getElementById('btn-stop');
-const recordStatus = document.getElementById('record-status');
-const canvas = document.getElementById('canvas-record');
+const btnListen = document.getElementById('btn-listen');
+const listenLabel = document.getElementById('listen-label');
+const waveformContainer = document.getElementById('waveform-container');
+const canvas = document.getElementById('canvas-waveform');
 const canvasCtx = canvas.getContext('2d');
 
-btnRecord.addEventListener('click', startRecording);
-btnStop.addEventListener('click', stopRecording);
+btnListen.addEventListener('click', toggleRecording);
+
+async function toggleRecording() {
+    if (isRecording) {
+        stopRecording();
+    } else {
+        await startRecording();
+    }
+}
 
 async function startRecording() {
     try {
@@ -96,7 +70,7 @@ async function startRecording() {
             clearCanvas();
 
             if (audioChunks.length === 0) {
-                recordStatus.textContent = 'Enregistrement vide';
+                listenLabel.textContent = 'Enregistrement vide';
                 return;
             }
 
@@ -105,14 +79,14 @@ async function startRecording() {
         };
 
         mediaRecorder.start();
-        btnRecord.disabled = true;
-        btnRecord.classList.add('recording');
-        btnStop.disabled = false;
-        recordStatus.textContent = 'Enregistrement en cours...';
+        isRecording = true;
+        btnListen.classList.add('listening');
+        listenLabel.textContent = 'Ecoute en cours... Appuyez pour arreter';
+        waveformContainer.classList.remove('hidden');
         drawWaveform();
 
     } catch (err) {
-        recordStatus.textContent = 'Erreur : acces au micro refuse';
+        listenLabel.textContent = 'Erreur : acces au micro refuse';
         console.error('Microphone error:', err);
     }
 }
@@ -121,10 +95,10 @@ function stopRecording() {
     if (mediaRecorder && mediaRecorder.state !== 'inactive') {
         mediaRecorder.stop();
     }
-    btnRecord.disabled = false;
-    btnRecord.classList.remove('recording');
-    btnStop.disabled = true;
-    recordStatus.textContent = 'Analyse...';
+    isRecording = false;
+    btnListen.classList.remove('listening');
+    listenLabel.textContent = 'Analyse...';
+    waveformContainer.classList.add('hidden');
 }
 
 function drawWaveform() {
@@ -136,7 +110,7 @@ function drawWaveform() {
         animationId = requestAnimationFrame(draw);
         analyser.getByteTimeDomainData(dataArray);
 
-        canvasCtx.fillStyle = '#0f0f1a';
+        canvasCtx.fillStyle = 'rgba(15, 15, 26, 0.3)';
         canvasCtx.fillRect(0, 0, canvas.width, canvas.height);
 
         canvasCtx.lineWidth = 2;
@@ -163,8 +137,9 @@ function clearCanvas() {
     canvasCtx.fillRect(0, 0, canvas.width, canvas.height);
 }
 
+// ---- Match from Recording ----
 async function matchRecording(blob) {
-    showLoading('Analyse de l\'enregistrement...');
+    showLoading('Analyse de la voix...');
     try {
         const formData = new FormData();
         formData.append('file', blob, 'recording.webm');
@@ -173,34 +148,32 @@ async function matchRecording(blob) {
         hideLoading();
 
         if (data.success) {
-            showResults(data.results);
-            recordStatus.textContent = `${data.results.length} resultat(s) trouve(s)`;
+            displayResults(data.results);
         } else {
-            recordStatus.textContent = 'Erreur: ' + (data.detail || 'inconnue');
+            listenLabel.textContent = 'Erreur: ' + (data.detail || 'inconnue');
         }
     } catch (err) {
         hideLoading();
-        recordStatus.textContent = 'Erreur reseau';
+        listenLabel.textContent = 'Erreur reseau';
         console.error('Match error:', err);
     }
 }
 
-// ---- File Upload ----
-document.getElementById('form-upload').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const fileInput = document.getElementById('input-file');
-    if (!fileInput.files[0]) return;
+// ---- File Upload Match ----
+document.getElementById('input-file-match').addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
 
     showLoading('Analyse du fichier audio...');
     try {
         const formData = new FormData();
-        formData.append('file', fileInput.files[0]);
+        formData.append('file', file);
         const resp = await fetch('/api/match/upload', { method: 'POST', body: formData });
         const data = await resp.json();
         hideLoading();
 
         if (data.success) {
-            showResults(data.results);
+            displayResults(data.results);
         } else {
             alert('Erreur: ' + (data.detail || 'inconnue'));
         }
@@ -209,186 +182,89 @@ document.getElementById('form-upload').addEventListener('submit', async (e) => {
         alert('Erreur reseau');
         console.error(err);
     }
+    // Reset file input
+    e.target.value = '';
 });
 
-// ---- YouTube Match ----
-document.getElementById('form-youtube-match').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const url = document.getElementById('input-yt-url').value.trim();
-    if (!url) return;
+// ---- Display Results ----
+function displayResults(results) {
+    const container = document.getElementById('results-container');
+    showScreen('screen-results');
 
-    showLoading('Telechargement et analyse de la video YouTube...');
-    try {
-        const formData = new FormData();
-        formData.append('url', url);
-        const resp = await fetch('/api/match/youtube', { method: 'POST', body: formData });
-        const data = await resp.json();
-        hideLoading();
-
-        if (data.success) {
-            showResults(data.results);
-        } else {
-            alert('Erreur: ' + (data.detail || 'inconnue'));
-        }
-    } catch (err) {
-        hideLoading();
-        alert('Erreur reseau');
-        console.error(err);
-    }
-});
-
-// ---- Index Upload (audio file) ----
-document.getElementById('form-index-upload').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const fileInput = document.getElementById('input-index-file');
-    const dubberName = document.getElementById('input-dubber-name').value.trim();
-    const originalActor = document.getElementById('input-original-actor').value.trim();
-
-    if (!fileInput.files[0] || !dubberName) return;
-
-    showLoading('Indexation du fichier audio...');
-    const resultDiv = document.getElementById('index-upload-result');
-    try {
-        const formData = new FormData();
-        formData.append('file', fileInput.files[0]);
-        formData.append('dubber_name', dubberName);
-        formData.append('original_actor', originalActor);
-        const resp = await fetch('/api/index/upload', { method: 'POST', body: formData });
-        const data = await resp.json();
-        hideLoading();
-
-        resultDiv.classList.remove('hidden');
-        if (data.success) {
-            const info = data.indexed;
-            resultDiv.innerHTML = `<div class="alert alert-success">
-                Voix ajoutee ! Doubleur : <strong>${escapeHtml(info.dubber)}</strong>
-                ${info.original_actor ? ` (voix de ${escapeHtml(info.original_actor)})` : ''}
+    if (!results || results.length === 0) {
+        container.innerHTML = `
+            <div class="no-results-card">
+                <div class="no-results-icon">?</div>
+                <h2>Aucune correspondance</h2>
+                <p>La voix n'a pas ete reconnue dans notre base de donnees.</p>
             </div>`;
-            // Reset form
-            fileInput.value = '';
-            document.getElementById('input-dubber-name').value = '';
-            document.getElementById('input-original-actor').value = '';
-            refreshStats();
-        } else {
-            resultDiv.innerHTML = `<div class="alert alert-error">${escapeHtml(data.detail || 'Erreur')}</div>`;
-        }
-    } catch (err) {
-        hideLoading();
-        resultDiv.classList.remove('hidden');
-        resultDiv.innerHTML = `<div class="alert alert-error">Erreur reseau</div>`;
+        return;
     }
-});
 
-// ---- Index URL ----
-document.getElementById('form-index-url').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const url = document.getElementById('input-index-url').value.trim();
-    if (!url) return;
+    // Show the best match prominently, then others below
+    const best = results[0];
+    const others = results.slice(1);
 
-    showLoading('Indexation de la video...');
-    const resultDiv = document.getElementById('index-url-result');
-    try {
-        const formData = new FormData();
-        formData.append('url', url);
-        const resp = await fetch('/api/index/url', { method: 'POST', body: formData });
-        const data = await resp.json();
-        hideLoading();
-
-        resultDiv.classList.remove('hidden');
-        if (data.success) {
-            const info = data.indexed;
-            resultDiv.innerHTML = `<div class="alert alert-success">
-                Video indexee ! Doubleur : <strong>${escapeHtml(info.dubber)}</strong>
-                ${info.original_actor ? ` (voix de ${escapeHtml(info.original_actor)})` : ''}
-            </div>`;
-            refreshStats();
-        } else {
-            resultDiv.innerHTML = `<div class="alert alert-error">${escapeHtml(data.detail || 'Erreur')}</div>`;
-        }
-    } catch (err) {
-        hideLoading();
-        resultDiv.classList.remove('hidden');
-        resultDiv.innerHTML = `<div class="alert alert-error">Erreur reseau</div>`;
-    }
-});
-
-// ---- Index Search ----
-document.getElementById('form-index-search').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const query = document.getElementById('input-search-query').value.trim();
-    const maxVideos = document.getElementById('input-max-videos').value;
-
-    showLoading('Recherche et indexation en cours... (cela peut prendre plusieurs minutes)');
-    const resultDiv = document.getElementById('index-search-result');
-    try {
-        const formData = new FormData();
-        formData.append('query', query);
-        formData.append('max_videos', maxVideos);
-        const resp = await fetch('/api/index/search', { method: 'POST', body: formData });
-        const data = await resp.json();
-        hideLoading();
-
-        resultDiv.classList.remove('hidden');
-        if (data.success) {
-            resultDiv.innerHTML = `<div class="alert alert-success">
-                ${data.indexed_count} video(s) indexee(s) avec succes !
-            </div>`;
-            if (data.indexed && data.indexed.length > 0) {
-                resultDiv.innerHTML += '<div style="margin-top:12px">' +
-                    data.indexed.map(v => `<div class="actor-item">
-                        <div>
-                            <div class="actor-name">${escapeHtml(v.dubber)}</div>
-                            <div class="actor-original">${escapeHtml(v.original_actor || '')}</div>
-                        </div>
-                    </div>`).join('') + '</div>';
-            }
-            refreshStats();
-        } else {
-            resultDiv.innerHTML = `<div class="alert alert-error">${escapeHtml(data.detail || 'Erreur')}</div>`;
-        }
-    } catch (err) {
-        hideLoading();
-        resultDiv.classList.remove('hidden');
-        resultDiv.innerHTML = `<div class="alert alert-error">Erreur reseau</div>`;
-    }
-});
-
-// ---- Load Actors ----
-async function loadActors() {
-    const list = document.getElementById('actors-list');
-    try {
-        const resp = await fetch('/api/actors');
-        const data = await resp.json();
-
-        if (!data.actors || data.actors.length === 0) {
-            list.innerHTML = '<p class="placeholder">Aucun acteur dans la base. Indexez des videos dans l\'onglet "Indexer des voix".</p>';
-            return;
-        }
-
-        list.innerHTML = data.actors.map(a => `
-            <div class="actor-item">
-                <div>
-                    <div class="actor-name">${escapeHtml(a.name)}</div>
-                    <div class="actor-original">${a.original_actor ? 'Voix de : ' + escapeHtml(a.original_actor) : ''}</div>
-                </div>
-                <div class="actor-samples">${a.sample_count} echantillon(s)</div>
+    container.innerHTML = `
+        <div id="best-match" class="best-match-card">
+            <div class="match-score">${best.similarity}%</div>
+            <h2 class="match-name">${escapeHtml(best.name)}</h2>
+            ${best.original_actor ? `<p class="match-role">Voix de ${escapeHtml(best.original_actor)}</p>` : ''}
+            <div id="wiki-info" class="wiki-info loading-wiki">
+                <div class="wiki-spinner"></div>
+                <span>Recherche d'informations...</span>
             </div>
-        `).join('');
-    } catch (err) {
-        list.innerHTML = '<p class="placeholder">Erreur de chargement</p>';
-    }
+        </div>
+        ${others.length > 0 ? `
+            <h3 class="other-matches-title">Autres correspondances</h3>
+            ${others.map(r => `
+                <div class="other-match-card">
+                    <div class="other-match-info">
+                        <span class="other-match-name">${escapeHtml(r.name)}</span>
+                        ${r.original_actor ? `<span class="other-match-role"> - voix de ${escapeHtml(r.original_actor)}</span>` : ''}
+                    </div>
+                    <div class="other-match-score">${r.similarity}%</div>
+                </div>
+            `).join('')}
+        ` : ''}
+    `;
+
+    // Fetch Wikipedia info for the best match
+    fetchWikipediaInfo(best.name);
 }
 
-document.getElementById('btn-refresh-actors').addEventListener('click', loadActors);
-
-// ---- Refresh Stats ----
-async function refreshStats() {
+// ---- Fetch Wikipedia Info ----
+async function fetchWikipediaInfo(actorName) {
+    const wikiDiv = document.getElementById('wiki-info');
     try {
-        const resp = await fetch('/api/stats');
+        const resp = await fetch(`/api/wikipedia/${encodeURIComponent(actorName)}`);
         const data = await resp.json();
-        document.getElementById('stat-actors').textContent = data.actors;
-        document.getElementById('stat-samples').textContent = data.voice_samples;
+
+        if (data.success && data.info) {
+            const info = data.info;
+            wikiDiv.classList.remove('loading-wiki');
+            wikiDiv.innerHTML = `
+                ${info.thumbnail ? `<img src="${escapeHtml(info.thumbnail)}" alt="${escapeHtml(info.title)}" class="wiki-thumb" />` : ''}
+                <div class="wiki-text">
+                    ${info.description ? `<p class="wiki-desc">${escapeHtml(info.description)}</p>` : ''}
+                    ${info.extract ? `<p class="wiki-extract">${escapeHtml(info.extract)}</p>` : ''}
+                    ${info.url ? `<a href="${escapeHtml(info.url)}" target="_blank" rel="noopener" class="wiki-link">Voir sur Wikipedia</a>` : ''}
+                </div>
+            `;
+        } else {
+            wikiDiv.classList.remove('loading-wiki');
+            wikiDiv.innerHTML = '<p class="wiki-not-found">Aucune information Wikipedia trouvee.</p>';
+        }
     } catch (err) {
-        // ignore
+        wikiDiv.classList.remove('loading-wiki');
+        wikiDiv.innerHTML = '<p class="wiki-not-found">Impossible de charger les informations.</p>';
+        console.error('Wikipedia fetch error:', err);
     }
 }
+
+// ---- Back Button ----
+document.getElementById('btn-back').addEventListener('click', () => {
+    showScreen('screen-main');
+    listenLabel.textContent = 'Appuyez pour identifier une voix';
+    document.getElementById('results-container').innerHTML = '';
+});

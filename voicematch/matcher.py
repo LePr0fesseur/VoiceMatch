@@ -3,7 +3,6 @@
 import logging
 import numpy as np
 from pathlib import Path
-from typing import Optional
 
 from . import audio, database
 from .config import SIMILARITY_THRESHOLD, TOP_K_RESULTS
@@ -34,8 +33,6 @@ def match_voice(
                 "name": entry["name"],
                 "original_actor": entry["original_actor"],
                 "similarity": round(similarity * 100, 1),
-                "youtube_url": entry["youtube_url"],
-                "youtube_title": entry["youtube_title"],
                 "actor_id": entry["actor_id"],
                 "sample_id": entry["sample_id"],
             })
@@ -80,25 +77,3 @@ def match_from_bytes(
     if embedding is None:
         return []
     return match_voice(embedding, top_k=top_k, threshold=threshold)
-
-
-def match_from_youtube(
-    url: str,
-    top_k: int = TOP_K_RESULTS,
-    threshold: float = SIMILARITY_THRESHOLD,
-) -> list[dict]:
-    """Match a voice from a YouTube video URL."""
-    from .youtube import download_audio as yt_download
-
-    audio_path = yt_download(url)
-    if audio_path is None:
-        return []
-
-    try:
-        return match_from_file(audio_path, top_k=top_k, threshold=threshold)
-    finally:
-        # Clean up temp file
-        try:
-            audio_path.unlink()
-        except OSError:
-            pass
