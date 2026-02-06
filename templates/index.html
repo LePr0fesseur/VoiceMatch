@@ -83,6 +83,20 @@
         <!-- INDEX TAB -->
         <section id="tab-index" class="tab-content">
             <div class="card">
+                <h2>Ajouter une voix depuis un fichier audio</h2>
+                <p>Uploadez un fichier audio (WAV, MP3, OGG...) et renseignez le nom du doubleur.</p>
+                <form id="form-index-upload" enctype="multipart/form-data">
+                    <input type="file" id="input-index-file" name="file" accept="audio/*" required />
+                    <input type="text" id="input-dubber-name" name="dubber_name"
+                           placeholder="Nom du doubleur (ex: Emmanuel Curtil)" required />
+                    <input type="text" id="input-original-actor" name="original_actor"
+                           placeholder="Acteur original double (ex: Jim Carrey) - optionnel" />
+                    <button type="submit" class="btn btn-primary">Ajouter a la base</button>
+                </form>
+                <div id="index-upload-result" class="hidden"></div>
+            </div>
+
+            <div class="card">
                 <h2>Indexer une video YouTube</h2>
                 <p>Ajoutez une video de doubleur a la base de donnees.</p>
                 <form id="form-index-url">

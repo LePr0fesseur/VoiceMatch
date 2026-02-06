@@ -237,6 +237,48 @@ document.getElementById('form-youtube-match').addEventListener('submit', async (
     }
 });
 
+// ---- Index Upload (audio file) ----
+document.getElementById('form-index-upload').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const fileInput = document.getElementById('input-index-file');
+    const dubberName = document.getElementById('input-dubber-name').value.trim();
+    const originalActor = document.getElementById('input-original-actor').value.trim();
+
+    if (!fileInput.files[0] || !dubberName) return;
+
+    showLoading('Indexation du fichier audio...');
+    const resultDiv = document.getElementById('index-upload-result');
+    try {
+        const formData = new FormData();
+        formData.append('file', fileInput.files[0]);
+        formData.append('dubber_name', dubberName);
+        formData.append('original_actor', originalActor);
+        const resp = await fetch('/api/index/upload', { method: 'POST', body: formData });
+        const data = await resp.json();
+        hideLoading();
+
+        resultDiv.classList.remove('hidden');
+        if (data.success) {
+            const info = data.indexed;
+            resultDiv.innerHTML = `<div class="alert alert-success">
+                Voix ajoutee ! Doubleur : <strong>${escapeHtml(info.dubber)}</strong>
+                ${info.original_actor ? ` (voix de ${escapeHtml(info.original_actor)})` : ''}
+            </div>`;
+            // Reset form
+            fileInput.value = '';
+            document.getElementById('input-dubber-name').value = '';
+            document.getElementById('input-original-actor').value = '';
+            refreshStats();
+        } else {
+            resultDiv.innerHTML = `<div class="alert alert-error">${escapeHtml(data.detail || 'Erreur')}</div>`;
+        }
+    } catch (err) {
+        hideLoading();
+        resultDiv.classList.remove('hidden');
+        resultDiv.innerHTML = `<div class="alert alert-error">Erreur reseau</div>`;
+    }
+});
+
 // ---- Index URL ----
 document.getElementById('form-index-url').addEventListener('submit', async (e) => {
     e.preventDefault();

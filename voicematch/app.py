@@ -134,6 +134,92 @@ async def match_youtube(url: str = Form(...)):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.post("/api/index/upload")
+async def index_upload(
+    file: UploadFile = File(...),
+    dubber_name: str = Form(...),
+    original_actor: str = Form(""),
+):
+    """Index a voice from an uploaded audio file (WAV, MP3, etc.)."""
+    if not dubber_name.strip():
+        raise HTTPException(status_code=400, detail="Le nom du doubleur est requis")
+
+    contents = await file.read()
+    if not contents:
+        raise HTTPException(status_code=400, detail="Fichier audio vide")
+
+    suffix = Path(file.filename).suffix if file.filename else ".wav"
+    tmp = TEMP_DIR / f"index_upload_{id(contents)}{suffix}"
+    wav_tmp = TEMP_DIR / f"index_upload_{id(contents)}.wav"
+    try:
+        tmp.write_bytes(contents)
+
+        # Convert to WAV if needed
+        audio_path = tmp
+        if suffix.lower() not in (".wav",):
+            import subprocess
+            result = subprocess.run(
+                ["ffmpeg", "-y", "-i", str(tmp), "-ar", "16000", "-ac", "1", str(wav_tmp)],
+                capture_output=True,
+                timeout=30,
+            )
+            if result.returncode == 0:
+                audio_path = wav_tmp
+
+        # Extract embedding
+        embedding = await asyncio.to_thread(
+            audio.extract_embedding_from_file, audio_path
+        )
+        if embedding is None:
+            raise HTTPException(
+                status_code=422,
+                detail="Impossible d'extraire l'empreinte vocale. Verifiez le fichier audio (min 1 seconde).",
+            )
+
+        # Store in database
+        actor_id = database.find_or_create_actor(
+            name=dubber_name.strip(),
+            original_actor=original_actor.strip() or None,
+            language="fr",
+        )
+
+        # Save audio permanently
+        from .config import VOICES_DIR
+        import shutil
+        permanent_path = VOICES_DIR / f"actor_{actor_id}" / (file.filename or "upload.wav")
+        permanent_path.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(str(audio_path), str(permanent_path))
+
+        sample_id = database.add_voice_sample(
+            actor_id=actor_id,
+            embedding=embedding,
+            youtube_url="",
+            youtube_title=f"Upload: {file.filename or 'audio'}",
+            audio_path=str(permanent_path),
+        )
+
+        return {
+            "success": True,
+            "indexed": {
+                "actor_id": actor_id,
+                "sample_id": sample_id,
+                "dubber": dubber_name.strip(),
+                "original_actor": original_actor.strip(),
+            },
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Index upload error: %s", e)
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        for f in [tmp, wav_tmp]:
+            try:
+                f.unlink()
+            except OSError:
+                pass
+
+
 @app.post("/api/index/url")
 async def index_url(url: str = Form(...)):
     """Index a single YouTube video into the voice database."""
