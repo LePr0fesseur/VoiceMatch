@@ -1,27 +1,39 @@
 # VoiceMatch
 
-**Shazam pour les voix d'acteurs et doubleurs.**
+**Shazam pour les voix de doubleurs.**
 
-VoiceMatch permet de reconnaitre la voix d'un acteur ou d'un doubleur a partir d'un extrait audio, exactement comme Shazam le fait pour la musique.
+VoiceMatch permet de reconnaitre la voix d'un doubleur a partir d'un extrait audio (micro ou fichier), exactement comme Shazam le fait pour la musique.
 
 ## Fonctionnalites
 
-- **Identification vocale** : Enregistrez ou uploadez un extrait audio pour identifier le doubleur
-- **Analyse YouTube** : Collez une URL YouTube pour identifier la voix dans la video
-- **Base de donnees auto-alimentee** : L'application recherche automatiquement des videos de doubleurs sur YouTube et construit sa base de voix
-- **Interface web** : Interface intuitive avec enregistrement micro en temps reel
+- **Identification vocale** : Enregistrez via micro ou uploadez un extrait audio pour identifier le doubleur
+- **Interface publique** : Interface Shazam-like avec bouton micro + upload de fichier
+- **Back-office admin** : Espace securise pour gerer la base de voix (ajout/suppression de doubleurs et echantillons)
+- **Fiche Wikipedia** : Affichage automatique des infos Wikipedia du doubleur identifie
+- **Pipeline audio avance** : VAD, reduction de bruit, pre-emphasis, MFCC, score fusion
 
 ## Architecture
 
 ```
 voicematch/
-  app.py        # API FastAPI + serveur web
-  youtube.py    # Recherche YouTube + extraction audio (yt-dlp)
-  audio.py      # Traitement audio + extraction d'empreintes vocales (resemblyzer)
-  matcher.py    # Moteur de correspondance vocale
-  indexer.py    # Construction de la base de voix depuis YouTube
-  database.py   # Couche base de donnees SQLite
+  app.py        # API FastAPI + routes publiques et admin
+  audio.py      # Pipeline audio (ECAPA-TDNN / resemblyzer, VAD, MFCC)
+  matcher.py    # Moteur de correspondance (score fusion, per-segment matching)
+  indexer.py    # Indexation robuste (multi-segment + augmentation)
+  database.py   # Couche SQLite (voix, acteurs, settings admin)
+  wikipedia.py  # Integration Wikipedia (FR/EN)
+  auth.py       # Authentification admin (PBKDF2 + sessions HMAC)
   config.py     # Configuration
+
+templates/
+  index.html    # Interface publique
+  admin.html    # Interface admin
+
+static/
+  app.js        # JS interface publique
+  admin.js      # JS interface admin
+  style.css     # Styles publics
+  admin.css     # Styles admin
 ```
 
 ## Installation
@@ -57,29 +69,32 @@ python run.py
 
 Ouvrir http://localhost:8000 dans votre navigateur.
 
-### Etape 1 : Alimenter la base de voix
+### Interface publique (/)
 
-Allez dans l'onglet **"Indexer des voix"** :
+- **Micro** : Appuyez sur le bouton central pour enregistrer votre voix ou un extrait
+- **Fichier** : Uploadez un fichier audio (WAV, MP3, WebM...)
 
-1. **Indexer une video** : Collez l'URL d'une video YouTube de doubleur
-2. **Recherche automatique** : Entrez un nom d'acteur (ex: "Jim Carrey") et l'app recherchera et indexera automatiquement des videos de doubleurs
+### Administration (/admin)
 
-### Etape 2 : Identifier une voix
+1. Accedez a http://localhost:8000/admin
+2. Mot de passe par defaut : `admin` (a changer des la premiere connexion)
+3. Uploadez des fichiers MP3 pour alimenter la base de voix
+4. Gerez les doubleurs et leurs echantillons
 
-Allez dans l'onglet **"Identifier une voix"** :
+### Acces mobile (HTTPS)
 
-1. **Micro** : Enregistrez directement depuis votre micro
-2. **Fichier** : Uploadez un fichier audio (WAV, MP3, etc.)
-3. **YouTube** : Collez une URL YouTube
+L'acces micro sur mobile necessite HTTPS. Pour du developpement local :
+
+```bash
+pip install pyopenssl
+```
+
+Puis lancez le serveur avec un certificat auto-signe.
 
 ## Troubleshooting
 
-### yt-dlp ne fonctionne pas
-```bash
-pip install --upgrade yt-dlp
-```
-
 ### ffmpeg non trouve
+
 ```bash
 # Ubuntu/Debian
 sudo apt update && sudo apt install ffmpeg
@@ -87,23 +102,22 @@ sudo apt update && sudo apt install ffmpeg
 # macOS
 brew install ffmpeg
 
-# Windows
-# Telecharger depuis https://ffmpeg.org/download.html
+# Windows : telecharger depuis https://ffmpeg.org/download.html
 ```
 
-### Le modele de voix ne se telecharge pas
-Le modele resemblyzer se telecharge automatiquement au premier lancement (~50 Mo). Verifiez votre connexion internet.
-
 ### Pas de correspondance trouvee
-- Assurez-vous d'avoir indexe suffisamment de voix (onglet "Indexer")
+
+- Assurez-vous d'avoir indexe suffisamment de voix via l'admin
 - L'extrait audio doit durer au moins 1 seconde
 - La qualite audio affecte la precision
+- Pour les extraits de films, le systeme isole automatiquement les segments de parole
 
 ## Technologies
 
-- **FastAPI** : Framework web Python rapide
-- **yt-dlp** : Telechargement audio YouTube
-- **Resemblyzer** : Empreintes vocales par deep learning (GE2E)
-- **librosa** : Traitement audio
+- **FastAPI** : Framework web Python
+- **ECAPA-TDNN** (SpeechBrain) : Empreintes vocales (EER 0.80% sur VoxCeleb1)
+- **Resemblyzer** : Fallback GE2E si SpeechBrain indisponible
+- **WebRTC VAD** : Detection d'activite vocale
+- **librosa** : Extraction MFCC (score fusion)
 - **SQLite** : Base de donnees locale
 - **Web Audio API** : Enregistrement micro dans le navigateur
